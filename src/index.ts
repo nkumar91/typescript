@@ -15,7 +15,7 @@ async function testDB() {
   try {
     await sequelize.authenticate();
     console.log("✅ Database connection successful!");
-     await sequelize.sync();
+     await sequelize.sync({alter:true});
     // await sequelize.sync({force:true}); // {force:true} {alter:true} apply only development mode
     console.log("✅ Models synced");
   } catch (error) {
