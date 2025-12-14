@@ -1,8 +1,12 @@
 import express  from "express";
+import dotenv from 'dotenv';
 import authRouter from "./routes/authrouter";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import { applySecurity, authLimiter } from "./middleware/security";
 import { applyPerformanceOptimizations } from "./middleware/performance";
+
+// Load env variables
+dotenv.config();
 
 const app = express();
 
@@ -10,7 +14,7 @@ const app = express();
 applyPerformanceOptimizations(app);
 
 // Apply security middleware
-applySecurity(app);
+//applySecurity(app);
 
 // app.use is builtin middleware of Express
 app.use(express.json()); // application label middleware

@@ -1,35 +1,66 @@
-name: Node TypeScript Build
+name: CI-CD Pipeline
 
 on:
   push:
     branches: ["main"]
-  pull_request:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v3
         with:
-          node-version: 20
+          node-version: "18"
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: npm ci
 
-      - name: Build TypeScript
+      - name: Build Project (generates dist/)
         run: npm run build
 
-      - name: Run tests
-        run: npm test
-        continue-on-error: true   # optional
-
-      - name: Upload dist folder
-        uses: actions/upload-artifact@v4
+      # Upload dist folder as build artifact
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v3
         with:
-          name: dist
-          path: dist
+          name: dist-build
+          path: dist/
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download dist artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: dist-build
+          path: dist/
+
+      - name: Deploy to VPS (copy dist → server)
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "dist/*"
+          target: "/var/www/myapp/dist"
+
+      - name: Restart PM2 on server
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /var/www/myapp
+            rm -rf src routes controllers middleware helpers *.js
+            tar -xzf app.tar.gz
+            rm app.tar.gz
+            npm install --production
+            pm2 reload ecosystem.config.js --only myapp || pm2 start ecosystem.config.js
+            pm2 save

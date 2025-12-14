@@ -3,6 +3,7 @@ import http from "http";
 
 // src/app.ts
 import express2 from "express";
+import dotenv2 from "dotenv";
 
 // src/routes/authrouter.ts
 import express from "express";
@@ -14,10 +15,6 @@ import { DataTypes, Model } from "sequelize";
 import dotenv from "dotenv";
 import { Sequelize } from "sequelize";
 dotenv.config();
-var DATABASE = process.env.DB_NAME;
-var USER = process.env.DB_USER;
-var PASSWORD = process.env.DB_PASS;
-console.log(DATABASE, USER, PASSWORD);
 var sequelize = new Sequelize(
   process.env.DB_NAME,
   process.env.DB_USER,
@@ -81,6 +78,29 @@ User.init(
 // src/controller/AuthController.ts
 import bcrypt from "bcrypt";
 import { validationResult } from "express-validator";
+
+// src/utils/jwt.ts
+import jwt from "jsonwebtoken";
+var JWT_EXPIRE = process.env.JWT_EXPIRE || "7d";
+var getJwtSecret = () => process.env.JWT_SECRET || "t6d_6Gf^2**145@62$$&1kH@";
+var signJwt = (payload, expiresIn) => {
+  try {
+    const secret = getJwtSecret();
+    return jwt.sign(payload, secret, { expiresIn: expiresIn || JWT_EXPIRE });
+  } catch (err) {
+    return null;
+  }
+};
+var verifyJwt = (token) => {
+  try {
+    const decoded = jwt.verify(token, getJwtSecret());
+    return decoded;
+  } catch (err) {
+    return null;
+  }
+};
+
+// src/controller/AuthController.ts
 var signup = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -103,6 +123,7 @@ var signup = async (req, res) => {
     });
     const resData = info.toJSON();
     if (resData) {
+      const token = signJwt({ id: info.id, email: resData.email });
       res.status(201).json({
         status: "success",
         message: "Signup Successfully",
@@ -110,7 +131,8 @@ var signup = async (req, res) => {
           id: info.id,
           name: resData.name,
           email: resData.email,
-          phone: resData.phone
+          phone: resData.phone,
+          token
         }
       });
     }
@@ -142,12 +164,16 @@ var authLogin = async (req, res, next) => {
       return;
     }
     const { email, password } = req.body;
-    const getUser = await User.findOne({ where: { email } });
+    const getUser = await User.findOne({
+      where: { email },
+      attributes: ["id", "name", "email", "phone", "password"],
+      raw: true
+    });
     if (!getUser) {
       console.warn(`Login attempt with non-existent email: ${email}`);
       res.status(401).json({
         status: "failed",
-        message: "Invalid email or password"
+        message: "Invalid email"
       });
       return;
     }
@@ -156,11 +182,12 @@ var authLogin = async (req, res, next) => {
       console.warn(`Failed login attempt for email: ${email}`);
       res.status(401).json({
         status: "failed",
-        message: "Invalid email or password"
+        message: "Invalid password"
       });
       return;
     }
     console.log(`User logged in successfully: ${email}`);
+    const token = signJwt({ id: getUser.id, email: getUser.email });
     res.status(200).json({
       status: "success",
       message: "Login successful",
@@ -168,7 +195,8 @@ var authLogin = async (req, res, next) => {
         id: getUser.id,
         name: getUser.name,
         email: getUser.email,
-        phone: getUser.phone
+        phone: getUser.phone,
+        token
       }
     });
   } catch (err) {
@@ -211,11 +239,29 @@ var loginValidation = [
   body("password").notEmpty().withMessage("Password is required")
 ];
 
+// src/middleware/auth.ts
+var requireAuth = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ status: "failed", message: "Unauthorized" });
+  }
+  const token = authHeader.split(" ")[1];
+  const decoded = verifyJwt(token);
+  if (!decoded) {
+    return res.status(401).json({ status: "failed", message: "Invalid or expired token" });
+  }
+  req.user = decoded;
+  next();
+};
+
 // src/routes/authrouter.ts
 var authRouter = express.Router();
 authRouter.post("/signup", signupValidation, signup);
 authRouter.post("/login", loginValidation, authLogin);
 authRouter.get("/check", getData);
+authRouter.get("/profile", requireAuth, (req, res) => {
+  res.json({ status: "success", data: req.user });
+});
 authRouter.post("/formData", multer().none(), formDataHandle);
 authRouter.get("/check/:id", getDataByParam);
 var authrouter_default = authRouter;
@@ -262,43 +308,90 @@ var limiter = rateLimit({
 var authLimiter = rateLimit({
   windowMs: 15 * 60 * 1e3,
   // 15 minutes
-  max: 5,
+  max: 100,
   // limit each IP to 5 requests per windowMs
   message: "Too many login/signup attempts, please try again later.",
   skipSuccessfulRequests: false
 });
-var applySecurity = (app2) => {
-  app2.use(helmet());
-  app2.use(cors(corsOptions));
-  app2.use(limiter);
-  app2.disable("x-powered-by");
-  app2.use((req, res, next) => {
-    if (req.body && typeof req.body === "object") {
-      Object.keys(req.body).forEach((key) => {
-        if (req.body[key] === null || req.body[key] === void 0) {
-          delete req.body[key];
-        }
-      });
+
+// src/middleware/performance.ts
+import compression from "compression";
+var compressionMiddleware = compression({
+  level: 6,
+  // Compression level 0-9 (6 is good balance)
+  threshold: 1024,
+  // Compress responses larger than 1KB
+  filter: (req, res) => {
+    if (req.headers["x-no-compression"]) {
+      return false;
     }
-    next();
-  });
+    return compression.filter(req, res);
+  }
+});
+var cacheMiddleware = (req, res, next) => {
+  if (req.path.match(/\.(jpg|jpeg|png|gif|ico|css|js|woff|woff2|ttf|svg)$/)) {
+    res.set("Cache-Control", "public, max-age=31536000, immutable");
+  } else if (req.path.startsWith("/api/")) {
+    res.set("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.set("Pragma", "no-cache");
+    res.set("Expires", "0");
+  } else {
+    res.set("Cache-Control", "public, max-age=3600");
+  }
+  next();
+};
+var responseTimeMiddleware = (req, res, next) => {
+  const start = Date.now();
+  const originalJson = res.json.bind(res);
+  res.json = function(data) {
+    const duration = Date.now() - start;
+    res.set("X-Response-Time", `${duration}ms`);
+    if (duration > 1e3) {
+      console.warn(`[SLOW REQUEST] ${req.method} ${req.path} - ${duration}ms`);
+    }
+    return originalJson(data);
+  };
+  next();
+};
+var bodySizeLimitMiddleware = (req, res, next) => {
+  const contentLength = parseInt(req.get("content-length") || "0", 10);
+  const maxSize = 10 * 1024 * 1024;
+  if (contentLength > maxSize) {
+    return res.status(413).json({
+      status: "failed",
+      message: "Payload too large"
+    });
+  }
+  next();
+};
+var applyPerformanceOptimizations = (app2) => {
+  app2.use(compressionMiddleware);
+  app2.use(cacheMiddleware);
+  app2.use(responseTimeMiddleware);
+  app2.use(bodySizeLimitMiddleware);
+  app2.set("trust proxy", 1);
 };
 
 // src/app.ts
+dotenv2.config();
 var app = express2();
-applySecurity(app);
+applyPerformanceOptimizations(app);
 app.use(express2.json());
 app.use(express2.urlencoded({ extended: true }));
 app.use("/auth/signup", authLimiter);
 app.use("/auth/login", authLimiter);
 app.use("/auth", authrouter_default);
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    timestamp: (/* @__PURE__ */ new Date()).toISOString()
+  });
+});
 app.use(notFoundHandler);
 app.use(errorHandler);
 var app_default = app;
 
 // src/index.ts
-import dotenv2 from "dotenv";
-dotenv2.config();
 var PORT = process.env.PORT;
 var server = http.createServer(app_default);
 server.listen(PORT, function() {
@@ -308,7 +401,7 @@ async function testDB() {
   try {
     await sequelize.authenticate();
     console.log("\u2705 Database connection successful!");
-    await sequelize.sync({ alter: true });
+    await sequelize.sync();
     console.log("\u2705 Models synced");
   } catch (error) {
     console.error("\u274C Unable to connect to the database:", error);

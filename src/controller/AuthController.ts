@@ -3,12 +3,8 @@ import { User } from "../model/user.model";
 import { Op } from "sequelize";
 import bcrypt from "bcrypt";
 import { validationResult } from "express-validator";
-// type User = {
-//     name:string,
-//     email:string,
-//     password:string,
-//     phone:string
-// }
+import { signJwt } from "../utils/jwt";
+
 export const signup = async (req: Request, res: Response) => {
     try {
         // Check for validation errors
@@ -38,6 +34,7 @@ export const signup = async (req: Request, res: Response) => {
         
         const resData = info.toJSON();
         if (resData) {
+            const token = signJwt({ id: info.id, email: resData.email });
             res.status(201).json({
                 status:"success",
                 message:"Signup Successfully",
@@ -45,7 +42,8 @@ export const signup = async (req: Request, res: Response) => {
                     id:info.id,
                     name:resData.name,
                     email:resData.email,
-                    phone:resData.phone
+                    phone:resData.phone,
+                    token
                 }
             })
         }
@@ -83,13 +81,16 @@ export const authLogin = async (req: Request, res: Response, next: NextFunction)
         const { email, password } = req.body;
         
         // Check if user exists in database
-        const getUser = await User.findOne({where:{email:email}});
-        
+        const getUser = await User.findOne({
+            where: { email: email },
+            attributes: ['id', 'name', 'email', 'phone', 'password'],
+            raw: true
+        });
         if (!getUser) {
             console.warn(`Login attempt with non-existent email: ${email}`);
             res.status(401).json({
                 status: "failed",
-                message: "Invalid email or password"
+                message: "Invalid email"
             });
             return;
         }
@@ -101,13 +102,14 @@ export const authLogin = async (req: Request, res: Response, next: NextFunction)
             console.warn(`Failed login attempt for email: ${email}`);
             res.status(401).json({
                 status: "failed",
-                message: "Invalid email or password"
+                message: "Invalid password"
             });
             return;
         }
         
-        // Login successful
+        // Login successful — issue JWT token
         console.log(`User logged in successfully: ${email}`);
+        const token = signJwt({ id: getUser.id, email: getUser.email });
         res.status(200).json({
             status: "success",
             message: "Login successful",
@@ -115,7 +117,8 @@ export const authLogin = async (req: Request, res: Response, next: NextFunction)
                 id: getUser.id,
                 name: getUser.name,
                 email: getUser.email,
-                phone: getUser.phone
+                phone: getUser.phone,
+                token
             }
         })
     } catch (err) {
