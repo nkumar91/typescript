@@ -27,4 +27,5 @@ npm-debug.log
 *.log
 .dockerignore
 .env.example
+uploads/
 

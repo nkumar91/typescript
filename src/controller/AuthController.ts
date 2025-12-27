@@ -1,6 +1,6 @@
 import { Response, Request, NextFunction } from "express"
 import { User } from "../model/user.model";
-import { Op } from "sequelize";
+// import { Op } from "sequelize";
 import bcrypt from "bcrypt";
 import { validationResult } from "express-validator";
 import { signJwt } from "../utils/jwt";
@@ -96,8 +96,7 @@ export const authLogin = async (req: Request, res: Response, next: NextFunction)
         }
         
         // Compare provided password with stored hashed password
-        const isPasswordValid = await bcrypt.compare(password, getUser.password);
-        
+        const isPasswordValid = await bcrypt.compare(password, getUser.password);        
         if (!isPasswordValid) {
             console.warn(`Failed login attempt for email: ${email}`);
             res.status(401).json({

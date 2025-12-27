@@ -31,3 +31,36 @@ export const loginValidation: ValidationChain[] = [
     body('password')
         .notEmpty().withMessage('Password is required')
 ];
+
+// Product validation
+export const createProductValidation: ValidationChain[] = [
+    body('productName')
+        .trim()
+        .notEmpty().withMessage('Product name is required')
+        .isLength({ min: 2 }).withMessage('Product name must be at least 2 characters'),
+    body('productPrice')
+        .notEmpty().withMessage('Product price is required')
+        .isFloat({ gt: 0 }).withMessage('Product price must be a number greater than 0'),
+    body('description')
+        .optional()
+        .isLength({ max: 2000 }).withMessage('Description is too long'),
+    body('sku')
+        .optional()
+        .isAlphanumeric().withMessage('SKU must be alphanumeric')
+];
+
+export const updateProductValidation: ValidationChain[] = [
+    body('productName')
+        .optional()
+        .trim()
+        .isLength({ min: 2 }).withMessage('Product name must be at least 2 characters'),
+    body('productPrice')
+        .optional()
+        .isFloat({ gt: 0 }).withMessage('Product price must be a number greater than 0'),
+    body('description')
+        .optional()
+        .isLength({ max: 2000 }).withMessage('Description is too long'),
+    body('sku')
+        .optional()
+        .isAlphanumeric().withMessage('SKU must be alphanumeric')
+];

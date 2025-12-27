@@ -5,10 +5,10 @@ interface ProductAttributes {
   id: number;
   productName: string;
   productPrice: number;
-  description?: string;
-  sku?: string;
+  description: string;
+  sku: string;
   // Relative or absolute path to product image
-  productImage?: string;
+  productImage: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -20,9 +20,9 @@ export class Product extends Model<ProductAttributes, ProductCreationAttributes>
   public id!: number;
   public productName!: string;
   public productPrice!: number;
-  public description?: string;
-  public sku?: string;
-  public productImage?: string;
+  public description!: string;
+  public sku!: string;
+  public productImage!: string;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 }
@@ -68,8 +68,8 @@ Product.init(
   },
   {
     sequelize,
-    tableName: "Product",
-    modelName: "User",
+    tableName: "products",
+    modelName: "Product",
     timestamps: true,
   }
 );
