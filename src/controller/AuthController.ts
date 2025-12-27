@@ -3,7 +3,9 @@ import { User } from "../model/user.model";
 // import { Op } from "sequelize";
 import bcrypt from "bcrypt";
 import { validationResult } from "express-validator";
-import { signJwt } from "../utils/jwt";
+import { signJwt, verifyJwt } from "../utils/jwt";
+import redisClient from "../config/redis";
+import jwt from "jsonwebtoken";
 
 export const signup = async (req: Request, res: Response) => {
     try {
@@ -146,3 +148,41 @@ export const formDataHandle = (req: Request<{}, {}, User>, res: Response) => {
 
     }
 }
+
+export const logout = async (req: Request, res: Response) => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ status: 'failed', message: 'Unauthorized' });
+        }
+
+        const token = authHeader.split(' ')[1];
+
+        // Verify token is valid
+        const decoded = verifyJwt(token as any);
+        if (!decoded) {
+            return res.status(401).json({ status: 'failed', message: 'Invalid or expired token' });
+        }
+
+        // Decode token to get expiry
+        const decodedPayload: any = jwt.decode(token as string);
+        const exp = decodedPayload?.exp as number | undefined;
+        if (!exp) {
+            return res.status(400).json({ status: 'failed', message: 'Invalid token payload' });
+        }
+
+        const now = Math.floor(Date.now() / 1000);
+        const ttl = exp - now;
+        if (ttl <= 0) {
+            return res.status(400).json({ status: 'failed', message: 'Token already expired' });
+        }
+
+        // blacklist the token in Redis
+        await redisClient.setEx(`bl:${token}`, ttl, '1');
+
+        return res.status(200).json({ status: 'success', message: 'Logout successful' });
+    } catch (err) {
+        console.error('Logout Error', err);
+        return res.status(500).json({ status: 'failed', message: 'Internal server error' });
+    }
+};

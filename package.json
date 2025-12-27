@@ -46,6 +46,7 @@
     "mysql2": "^3.15.3",
     "pg": "^8.16.3",
     "pg-hstore": "^2.3.4",
+    "redis": "^5.10.0",
     "sequelize": "^6.37.7",
     "sequelize-typescript": "^2.1.6"
   }
