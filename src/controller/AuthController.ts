@@ -4,6 +4,7 @@ import { User } from "../model/user.model";
 import bcrypt from "bcrypt";
 import { validationResult } from "express-validator";
 import { signJwt, verifyJwt } from "../utils/jwt";
+import { sendSignupMail } from "../utils/mail";
 import redisClient from "../config/redis";
 import jwt from "jsonwebtoken";
 
@@ -48,6 +49,9 @@ export const signup = async (req: Request, res: Response) => {
                     token
                 }
             })
+
+            // send welcome / verification email (non-blocking)
+            sendSignupMail(resData.email, resData.name).catch(err => console.error('Send signup email error', err));
         }
 
     } catch (err) {
