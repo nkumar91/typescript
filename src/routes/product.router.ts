@@ -7,6 +7,9 @@ import { createProductValidation, updateProductValidation } from '../utils/valid
 
 const productRouter = express.Router();
 
+
+
+
 // Ensure upload folder exists
 const uploadsDir = path.join(process.cwd(), 'uploads', 'products');
 fs.mkdirSync(uploadsDir, { recursive: true });
@@ -21,6 +24,10 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
+export const cloud = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 1 * 1024 * 1024 }, // 1MB
+});
 
 productRouter.post('/', upload.single('productImage'), createProductValidation, productController.createProduct);
 productRouter.get('/search', productController.searchProducts);

@@ -4,6 +4,8 @@ import { validationResult } from 'express-validator';
 import fs from 'fs';
 import path from 'path';
 import { Op } from 'sequelize';
+import cloudinary from '../config/cloudinary';
+
 
 // Helper to build image URL / path
 const buildImagePath = (filename?: string) => {
@@ -20,17 +22,27 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
     }
 
     const { productName, productPrice, description, sku } = req.body;
-    let productImage: any ;
-    if ((req as any).file) {
-      productImage = buildImagePath((req as any).file.filename)!;
+    // let productImage: any;
+   
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
     }
+  //await cloudinary.uploader.destroy(publicId);
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: "uploads",
+      public_id: `PIMG_${Date.now()}`, // optional
+      overwrite: true,
+    });
+    // if ((req as any).file) {
+    //   productImage = buildImagePath((req as any).file.filename)!;
+    // }
 
     const newProduct = await Product.create({
       productName,
       productPrice,
       description,
       sku,
-      productImage,
+      productImage: result.secure_url,
     });
 
     res.status(201).json({ status: 'success', message: 'Product created', data: newProduct });
@@ -144,7 +156,7 @@ export const deleteProduct = async (req: Request, res: Response, next: NextFunct
     // Remove image file if present
     if (product.productImage) {
       const filePath = path.join(process.cwd(), product.productImage.replace(/^\//, ''));
-      fs.unlink(filePath, () => {});
+      fs.unlink(filePath, () => { });
     }
 
     await product.destroy();

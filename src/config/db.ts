@@ -20,7 +20,8 @@ async function testDB() {
     const isProd = process.env.NODE_ENV === 'production';
     console.log("Environment:", isProd);
     // In development we use alter to synchronize model changes without dropping data
-    await sequelize.sync({ alter: !isProd });
+    await sequelize.sync({ alter: false });
+    //await sequelize.sync({ alter: !isProd });
     // await sequelize.sync({force:true}); // {force:true} {alter:true} apply only development mode
     console.log("✅ Models synced");
   } catch (error) {
