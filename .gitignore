@@ -15,9 +15,6 @@
 # Recommended default ignores (leave these uncommented if you want them ignored):
 node_modules/
 dist/
-.env
-.env.local
-.env.*.local
 .DS_Store
 coverage/
 .nyc_output/
@@ -28,4 +25,5 @@ npm-debug.log
 .dockerignore
 .env.example
 uploads/
+.env
 

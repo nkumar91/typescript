@@ -5,6 +5,8 @@ import productRouter from "./routes/product.router";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import { applySecurity, authLimiter } from "./middleware/security";
 import { applyPerformanceOptimizations } from "./middleware/performance";
+import categoryRouter from "./routes/category.router";
+import cartRouter from "./routes/cart.router";
 
 // Load env variables
 dotenv.config();
@@ -27,6 +29,8 @@ app.use("/auth/login", authLimiter);
 
 app.use("/auth", authRouter); // router based middleware
 app.use('/products', productRouter);
+app.use('/categories', categoryRouter);
+app.use('/cart',cartRouter);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

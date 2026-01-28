@@ -46,7 +46,14 @@ export const createProductValidation: ValidationChain[] = [
         .isLength({ max: 2000 }).withMessage('Description is too long'),
     body('sku')
         .optional()
-        .isAlphanumeric().withMessage('SKU must be alphanumeric')
+        .isAlphanumeric().withMessage('SKU must be alphanumeric'),
+    body('categoryId')
+        .notEmpty().withMessage('Category ID is required')
+        .isInt({ gt: 0 }).withMessage('Category ID must be a positive integer'),
+    body('productUnit')
+        .optional()
+        .trim()
+        .isLength({ max: 50 }).withMessage('Product unit must not exceed 50 characters')
 ];
 
 export const updateProductValidation: ValidationChain[] = [
@@ -63,4 +70,43 @@ export const updateProductValidation: ValidationChain[] = [
     body('sku')
         .optional()
         .isAlphanumeric().withMessage('SKU must be alphanumeric')
+];
+// Category validation - Create
+export const createCategoryValidation: ValidationChain[] = [
+    body('catName')
+        .trim()
+        .notEmpty().withMessage('Category name is required')
+        .isLength({ min: 2 }).withMessage('Category name must be at least 2 characters')
+        .isLength({ max: 200 }).withMessage('Category name must not exceed 200 characters')
+        .matches(/^[a-zA-Z\s'-]+$/).withMessage('Category name can only contain letters, spaces, hyphens, and apostrophes'),
+    body('catSlug')
+        .trim()
+        .notEmpty().withMessage('Category slug is required')
+        .isLength({ min: 2 }).withMessage('Category slug must be at least 2 characters')
+        .isLength({ max: 100 }).withMessage('Category slug must not exceed 100 characters')
+        .matches(/^[a-z0-9-]+$/).withMessage('Category slug must be lowercase alphanumeric with hyphens only'),
+    body('catDesc')
+        .optional()
+        .trim()
+        .isLength({ max: 2000 }).withMessage('Category description must not exceed 2000 characters')
+];
+
+// Category validation - Update
+export const updateCategoryValidation: ValidationChain[] = [
+    body('catName')
+        .optional()
+        .trim()
+        .isLength({ min: 2 }).withMessage('Category name must be at least 2 characters')
+        .isLength({ max: 200 }).withMessage('Category name must not exceed 200 characters')
+        .matches(/^[a-zA-Z\s'-]+$/).withMessage('Category name can only contain letters, spaces, hyphens, and apostrophes'),
+    body('catSlug')
+        .optional()
+        .trim()
+        .isLength({ min: 2 }).withMessage('Category slug must be at least 2 characters')
+        .isLength({ max: 100 }).withMessage('Category slug must not exceed 100 characters')
+        .matches(/^[a-z0-9-]+$/).withMessage('Category slug must be lowercase alphanumeric with hyphens only'),
+    body('catDesc')
+        .optional()
+        .trim()
+        .isLength({ max: 2000 }).withMessage('Category description must not exceed 2000 characters')
 ];

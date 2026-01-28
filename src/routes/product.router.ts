@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import * as productController from '../controller/Product.Controller';
 import { createProductValidation, updateProductValidation } from '../utils/validators';
+import { requireAuth } from '../middleware/auth';
 
 const productRouter = express.Router();
 
@@ -26,14 +27,16 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 export const cloud = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 1 * 1024 * 1024 }, // 1MB
+  limits: { fileSize: 3 * 1024 * 1024 }, // 1MB
 });
 
-productRouter.post('/', upload.single('productImage'), createProductValidation, productController.createProduct);
+productRouter.post('/', requireAuth,upload.single('productImage'), createProductValidation,  productController.createProduct);
+productRouter.get('/:id', productController.getProductById);
+productRouter.get('/category/:cat_slug', productController.getProductBycategory);
 productRouter.get('/search', productController.searchProducts);
 productRouter.get('/', productController.getProducts);
-productRouter.get('/:id', productController.getProductById);
-productRouter.put('/:id', upload.single('productImage'), updateProductValidation, productController.updateProduct);
+productRouter.put('/:id', cloud.single('productImage'), updateProductValidation, productController.updateProduct);
 productRouter.delete('/:id', productController.deleteProduct);
+
 
 export default productRouter;

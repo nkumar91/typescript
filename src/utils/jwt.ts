@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 
 const JWT_EXPIRE = process.env.JWT_EXPIRE || '7d';
-const getJwtSecret = () => process.env.JWT_SECRET || 't6d_6Gf^2**145@62$$&1kH@';
+const getJwtSecret = ():string => process.env.JWT_SECRET || 't6d_6Gf^2**145@62$$&1kH@';
 
 export interface TokenPayload {
     id: number;

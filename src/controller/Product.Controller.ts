@@ -5,6 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import { Op } from 'sequelize';
 import cloudinary from '../config/cloudinary';
+import { Category } from '../model/category.model';
 
 
 // Helper to build image URL / path
@@ -21,13 +22,14 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
       return res.status(400).json({ status: 'failed', message: msgs });
     }
 
-    const { productName, productPrice, description, sku } = req.body;
+    const { productName, productPrice, description, sku, categoryId, productUnit } = req.body;
     // let productImage: any;
-   
+
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
     }
-  //await cloudinary.uploader.destroy(publicId);
+    console.log("File received:", req.file.originalname);
+    //await cloudinary.uploader.destroy(publicId);
     const result = await cloudinary.uploader.upload(req.file.path, {
       folder: "uploads",
       public_id: `PIMG_${Date.now()}`, // optional
@@ -42,11 +44,14 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
       productPrice,
       description,
       sku,
+      categoryId,
+      productUnit,
       productImage: result.secure_url,
     });
 
     res.status(201).json({ status: 'success', message: 'Product created', data: newProduct });
   } catch (err) {
+    console.log(err);
     next(err);
   }
 };
@@ -161,6 +166,41 @@ export const deleteProduct = async (req: Request, res: Response, next: NextFunct
 
     await product.destroy();
     res.json({ status: 'success', message: 'Product deleted' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+export const getProductBycategory = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { cat_slug } = req.params;
+    console.log("Category Slug:", cat_slug);
+    if(!cat_slug){
+      return  res.status(400).json({ status: 'failed', message: 'Category slug is required' });
+    }
+    Category.hasMany(Product, {
+      foreignKey: 'categoryId',
+      sourceKey: 'id'
+    });
+
+    Product.belongsTo(Category, {
+      foreignKey: 'categoryId',
+      targetKey: 'id'
+    });
+    const products = await Product.findAndCountAll({
+      include: [{
+        model: Category,
+        attributes: [],  
+        required: true,      // ✅ INNER JOIN
+        where: {
+          catSlug: cat_slug     // match category id
+        }
+      }]
+    });
+
+    if (!products) return res.status(404).json({ status: 'failed', message: 'Products not found' });
+    res.json({ status: 'success',count:products.count, data: products.rows });
   } catch (err) {
     next(err);
   }

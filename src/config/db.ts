@@ -18,11 +18,13 @@ async function testDB() {
     await sequelize.authenticate();
     console.log("✅ Database connection successful!");
     const isProd = process.env.NODE_ENV === 'production';
+    if(!isProd)
+      await sequelize.sync();
     console.log("Environment:", isProd);
     // In development we use alter to synchronize model changes without dropping data
-    await sequelize.sync({ alter: false });
-    //await sequelize.sync({ alter: !isProd });
-    // await sequelize.sync({force:true}); // {force:true} {alter:true} apply only development mode
+    //await sequelize.sync();
+   // await sequelize.sync({ alter: !isProd });
+    //await sequelize.sync({force:true}); // {force:true} {alter:true} apply only development mode
     console.log("✅ Models synced");
   } catch (error) {
     console.error("❌ Unable to connect to the database:",error);

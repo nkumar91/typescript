@@ -7,7 +7,8 @@ interface ProductAttributes {
   productPrice: number;
   description: string;
   sku: string;
-  // Relative or absolute path to product image
+  categoryId: number;
+  productUnit: string;
   productImage: string;
   createdAt?: Date;
   updatedAt?: Date;
@@ -21,6 +22,8 @@ export class Product extends Model<ProductAttributes, ProductCreationAttributes>
   public productName!: string;
   public productPrice!: number;
   public description!: string;
+  public productUnit!: string;
+  public categoryId!: number;
   public sku!: string;
   public productImage!: string;
   public readonly createdAt!: Date;
@@ -51,9 +54,17 @@ Product.init(
       allowNull: true,
       unique: true,
     },
+    productUnit: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+    },
     productImage: {
       type: DataTypes.STRING(500),
       allowNull: true,
+    },
+    categoryId: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: false,
     },
     createdAt: {
       type: DataTypes.DATE,
