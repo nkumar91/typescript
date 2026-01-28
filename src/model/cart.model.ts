@@ -93,7 +93,7 @@ Cart.init(
 Cart.belongsTo(User, { foreignKey: "userId", as: "user" });
 Cart.belongsTo(Product, { foreignKey: "productId", as: "product" });
 
-User.hasMany(Cart, { foreignKey: "userId", as: "cartItems" });
-Product.hasMany(Cart, { foreignKey: "productId", as: "cartItems" });
+// User.hasMany(Cart, { foreignKey: "userId", as: "cartItems" });
+// Product.hasMany(Cart, { foreignKey: "productId", as: "cartItems" });
 
 export default Cart;

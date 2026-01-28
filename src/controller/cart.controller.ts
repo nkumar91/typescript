@@ -22,11 +22,11 @@ export const addToCart = async (
                 success: false,
                 message: "userId, productId, and quantity are required",
             });
-           
+
         }
 
         if (quantity < 1) {
-           return res
+            return res
                 .status(400)
                 .json({ success: false, message: "Quantity must be at least 1" });
         }
@@ -52,7 +52,7 @@ export const addToCart = async (
         });
 
         if (cartItem) {
-           
+
             // Update quantity - increment by 1
             await Cart.update({ quantity: cartItem.quantity + 1 }, { where: { id: cartItem.id } });
         } else {
@@ -66,7 +66,7 @@ export const addToCart = async (
 
         // Fetch updated cart item with product details
         const updatedCartItem = await Cart.findByPk(cartItem.id, {
-            include: [{ model: Product, as: "product",required: true }],
+            include: [{ model: Product, as: "product", required: true }],
         });
 
         res.status(201).json({
@@ -107,6 +107,12 @@ export const getCartItems = async (
             res.status(404).json({ success: false, message: "User not found" });
             return;
         }
+        
+        // const cartItems = await Cart.findAndCountAll({
+        //     attributes: ['id', 'quantity', 'createdAt', 'updatedAt'],
+        //     where: { userId },
+        //     include: [{ model: Product, as: "product", required: true, attributes: ['id', 'productName', 'productPrice', 'productImage'] }],
+        // });
 
         const cartItems = await Cart.findAll({
             attributes:['id','quantity','createdAt','updatedAt'],
@@ -115,12 +121,14 @@ export const getCartItems = async (
         });
 
         // Calculate cart total
+         // const cartJson = cartItems.map(item => item.toJSON());
+        const cartJson = cartItems.map(item => item.get({ plain: true }));
         let cartTotal = 0;
-        const itemsWithTotal = cartItems.map((item: any) => {
+        const itemsWithTotal = cartJson.map((item: any) => {
             const itemTotal = Number(item.product.productPrice) * item.quantity;
             cartTotal += itemTotal;
             return {
-                ...item.dataValues,
+                ...item,
                 totalPrice: itemTotal,
             };
         });
@@ -128,11 +136,9 @@ export const getCartItems = async (
         res.status(200).json({
             success: true,
             message: "Cart items retrieved successfully",
-            data: {
-                items: itemsWithTotal,
-                cartTotal,
-                itemCount: cartItems.length,
-            },
+            cartTotal,
+            itemCount: cartItems.length,
+            data:itemsWithTotal, 
         });
     } catch (error) {
         console.error("Error fetching cart items:", error);
@@ -156,12 +162,12 @@ export const updateCartItem = async (
         const { action } = req.body;
 
         if (!id) {
-           return res.status(400).json({ success: false, message: "Cart item ID is required" });
+            return res.status(400).json({ success: false, message: "Cart item ID is required" });
             ;
         }
 
         if (!action || !["increment", "decrement"].includes(action)) {
-          return  res
+            return res
                 .status(400)
                 .json({ success: false, message: "Action must be 'increment' or 'decrement'" });
             ;
@@ -170,7 +176,7 @@ export const updateCartItem = async (
         const cartItem = await Cart.findByPk(id);
 
         if (!cartItem) {
-           return res
+            return res
                 .status(404)
                 .json({ success: false, message: "Cart item not found" });
             ;
@@ -179,7 +185,7 @@ export const updateCartItem = async (
         const newQuantity = action === "increment" ? cartItem.quantity + 1 : cartItem.quantity - 1;
 
         if (newQuantity < 1) {
-           return res
+            return res
                 .status(400)
                 .json({ success: false, message: "Quantity must be at least 1" });
             ;
